@@ -3829,6 +3829,10 @@ body {
     gap: 10px !important;
     align-items: start !important;
   }
+  /* Tasks area spans col 2 explicitly */
+  .chronicle-app .week-tasks-area {
+    min-height: 28px;
+  }
   .chronicle-app .week-col.today-col {
     border-color: var(--accent) !important;
     background: color-mix(in srgb, var(--accent) 5%, var(--surface)) !important;
@@ -5161,6 +5165,21 @@ body {
 </div>
 </div>
 
+<!-- Task quick-preview popup (long press on mobile) -->
+<div id="taskPreviewOverlay" onclick="closeTaskPreview()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:8000;"></div>
+<div id="taskPreviewPopup" style="display:none;position:fixed;left:50%;bottom:80px;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 8px 32px rgba(0,0,0,0.22);z-index:8001;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+    <div id="taskPreviewTitle" style="font-family:var(--font-display);font-size:1.1rem;flex:1;padding-right:8px;color:var(--text);"></div>
+    <button onclick="closeTaskPreview()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);line-height:1;">✕</button>
+  </div>
+  <div id="taskPreviewMeta" style="font-size:0.72rem;color:var(--text-muted);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);"></div>
+  <div id="taskPreviewNotes" style="font-size:0.85rem;color:var(--text);line-height:1.5;white-space:pre-wrap;border-top:1px solid var(--border);padding-top:10px;"></div>
+  <div style="display:flex;gap:8px;margin-top:14px;">
+    <button onclick="if(currentPreviewTaskId){editTask(currentPreviewTaskId);closeTaskPreview();}" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px;font-size:0.85rem;cursor:pointer;">✎ Edit</button>
+    <button onclick="closeTaskPreview()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;font-size:0.85rem;cursor:pointer;color:var(--text);">Close</button>
+  </div>
+</div>
+
 <script>
 // ════════════════ APP SWITCHER ════════════════
 let activeApp = localStorage.getItem('active-app') || 'apex';
@@ -5871,6 +5890,65 @@ function switchTab(tab) {
     document.getElementById('sidebarOverlay').classList.remove('open');
   }
 }
+
+
+// ════ TASK LONG-PRESS PREVIEW ════════════════════════════════════════════════
+let currentPreviewTaskId = null;
+let _lpTimer = null;
+
+function initWeekLongPress() {
+  document.querySelectorAll('#week-grid .week-task-item').forEach(el => {
+    el.removeEventListener('touchstart', _lpStart);
+    el.removeEventListener('touchend',   _lpCancel);
+    el.removeEventListener('touchmove',  _lpCancel);
+    el.addEventListener('touchstart', _lpStart, { passive: true });
+    el.addEventListener('touchend',   _lpCancel, { passive: true });
+    el.addEventListener('touchmove',  _lpCancel, { passive: true });
+  });
+}
+
+function _lpStart(e) {
+  const taskId = e.currentTarget.getAttribute('data-task-id');
+  if (!taskId) return;
+  _lpTimer = setTimeout(() => showTaskPreview(taskId), 500);
+}
+function _lpCancel() { clearTimeout(_lpTimer); _lpTimer = null; }
+
+function showTaskPreview(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  currentPreviewTaskId = taskId;
+
+  document.getElementById('taskPreviewTitle').textContent = task.title || '(no title)';
+
+  const meta = [];
+  if (task.due) meta.push('📅 ' + task.due);
+  if (task.priority && task.priority !== 'normal') meta.push('🔺 ' + task.priority);
+  if (task.tags?.length) task.tags.forEach(tg => meta.push('#' + tg));
+  const metaEl = document.getElementById('taskPreviewMeta');
+  metaEl.innerHTML = meta.map(m => `<span style="background:var(--surface2);padding:2px 7px;border-radius:20px;">${m}</span>`).join('');
+
+  const notesEl = document.getElementById('taskPreviewNotes');
+  if (task.notes && task.notes.trim()) {
+    notesEl.textContent = task.notes;
+    notesEl.style.fontStyle = '';
+    notesEl.style.color = 'var(--text)';
+  } else {
+    notesEl.textContent = 'No notes added.';
+    notesEl.style.fontStyle = 'italic';
+    notesEl.style.color = 'var(--text-muted)';
+  }
+
+  document.getElementById('taskPreviewOverlay').style.display = 'block';
+  document.getElementById('taskPreviewPopup').style.display = 'block';
+}
+
+function closeTaskPreview() {
+  document.getElementById('taskPreviewOverlay').style.display = 'none';
+  document.getElementById('taskPreviewPopup').style.display = 'none';
+  currentPreviewTaskId = null;
+}
+// ════ END LONG-PRESS PREVIEW ════════════════════════════════════════════════
 
 function toggleAppSidebar() {
   if (activeApp === 'chronicle') toggleChronicleSidebar();
@@ -8399,6 +8477,7 @@ function renderWeekly() {
         <div class="week-day-name">${dayNames[i]}</div>
         <div class="week-day-num">${d.getDate()}</div>
       </div>
+      <div class="week-tasks-area">
       <div class="week-drop-hint">Drop here</div>
       ${allDayTasks.length ? allDayTasks.map(t => {
         const cat = categories.find(c => c.id === t.cat);
@@ -8408,7 +8487,7 @@ function renderWeekly() {
         if (isDetail) {
           // ── Detail mode ──
           const dueClass = t.due ? (t.due < todayStr ? 'overdue' : t.due === todayStr ? 'today' : '') : '';
-          return `<div class="week-task-item detail-mode ${t.done ? 'done' : ''}"
+          return `<div class="week-task-item detail-mode ${t.done ? 'done' : ''}" data-task-id="${t.id}"
               ${isDraggable ? `draggable="true" ondragstart="onWeekDragStart(event, '${t.id}')" ondragend="onWeekDragEnd(event)"` : ''}
               onclick="${t.type === 'checkbox' ? `toggleTask('${t.id}')` : ''}">
             <div class="week-task-top">
@@ -8428,7 +8507,7 @@ function renderWeekly() {
           </div>`;
         } else {
           // ── Simple mode ──
-          return `<div class="week-task-item ${t.done ? 'done' : ''}"
+          return `<div class="week-task-item ${t.done ? 'done' : ''}" data-task-id="${t.id}"
               ${isDraggable ? `draggable="true" ondragstart="onWeekDragStart(event, '${t.id}')" ondragend="onWeekDragEnd(event)"` : ''}
               onclick="${t.type === 'checkbox' ? `toggleTask('${t.id}')` : ''}">
             ${isDraggable ? `<span class="drag-handle" title="Drag to reschedule">⠿</span>` : `<span style="font-size:0.7rem;color:#7B4EA8;flex-shrink:0">◎</span>`}
@@ -8439,7 +8518,7 @@ function renderWeekly() {
           </div>`;
         }
       }).join('') : `<div style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:12px;opacity:0.5">—</div>`}
-    </div>`;
+      </div>`;
   }).join('');
   _weekTouchInit();
 }
@@ -8451,7 +8530,7 @@ let draggedTaskId = null;
 // ── Weekly View Touch DnD Shim ──
 let _tDragId=null,_tDragGhost=null,_tDragOrigin=null,_tActiveCol=null;
 
-function _weekTouchInit(){const grid=document.getElementById('week-grid');if(!grid)return;grid.querySelectorAll('.week-task-item[draggable="true"]').forEach(el=>{const fresh=el.cloneNode(true);el.parentNode.replaceChild(fresh,el);fresh.addEventListener('touchstart',_tStart,{passive:false});});}
+function _weekTouchInit(){const grid=document.getElementById('week-grid');if(!grid)return;grid.querySelectorAll('.week-task-item[draggable="true"]').forEach(el=>{const fresh=el.cloneNode(true);el.parentNode.replaceChild(fresh,el);fresh.addEventListener('touchstart',_tStart,{passive:false});});if(typeof initWeekLongPress==='function')initWeekLongPress();}
 
 function _tStart(e){if(e.touches.length!==1)return;const taskEl=e.currentTarget;const attr=taskEl.getAttribute('ondragstart')||'';const sq="'";const re=new RegExp(sq+'([^'+sq+']+)'+sq);const m=attr.match(re);if(!m)return;e.preventDefault();_tDragId=m[1];_tDragOrigin=taskEl;_tDragGhost=taskEl.cloneNode(true);const r=taskEl.getBoundingClientRect();Object.assign(_tDragGhost.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',opacity:'0.75',pointerEvents:'none',zIndex:'9999',transform:'scale(1.05)',boxShadow:'0 8px 28px rgba(0,0,0,0.25)',borderRadius:'8px',transition:'none'});document.body.appendChild(_tDragGhost);taskEl.classList.add('dragging');document.addEventListener('touchmove',_tMove,{passive:false});document.addEventListener('touchend',_tEnd,{passive:false});document.addEventListener('touchcancel',_tCancel,{passive:false});}
 
