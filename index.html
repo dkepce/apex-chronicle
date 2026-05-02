@@ -3567,23 +3567,38 @@ body {
     font-size: 0.9rem;
   }
 }
+@media screen and (max-width: 480px) {
+  .chronicle-app .list-title { font-size: 1.4rem !important; }
+  .chronicle-app .stat-value { font-size: 1.4rem !important; }
+  .chronicle-app .stat-card { padding: 10px 12px !important; }
+  .chronicle-app .stats-row { gap: 6px !important; margin-bottom: 14px !important; }
+  .chronicle-app main { padding: 12px !important; }
+  .chronicle-app .quick-add-bar { padding: 8px 12px !important; font-size: 0.88rem !important; }
+  .chronicle-app .task-card, .chronicle-app .task-item-row { padding: 10px 12px !important; font-size: 0.88rem !important; }
+  .chronicle-app .add-btn { font-size: 0.78rem !important; padding: 6px 10px !important; }
+  .chronicle-app .list-header { margin-bottom: 12px !important; }
+  .chronicle-app .tab-btn { font-size: 0.72rem !important; padding: 4px 8px !important; }
+}
 
 /* ══════════════════════════════════════════
    CHRONICLE — Mobile sidebar
 ══════════════════════════════════════════ */
 
 /* Hamburger button — hidden on desktop */
-.chronicle-menu-btn {
-  display: none;
+.chronicle-menu-btn { display: none; }
+
+/* Hamburger lives in the switcher bar on mobile */
+.switcher-hamburger {
   background: none;
   border: none;
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  color: var(--text);
+  color: var(--sw-text);
   padding: 4px 8px;
   border-radius: 8px;
   flex-shrink: 0;
   line-height: 1;
+  margin-right: 2px;
 }
 
 /* Sidebar overlay — hidden by default */
@@ -3599,12 +3614,9 @@ body {
 }
 
 @media screen and (max-width: 800px) {
-  /* Show hamburger */
-  .chronicle-menu-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  /* Chronicle logo hidden on mobile — switcher bar shows the app name */
+  .chronicle-app .logo { display: none !important; }
+  .chronicle-app .header-divider { display: none !important; }
 
   /* Sidebar becomes slide-in drawer */
   .chronicle-app .app-shell {
@@ -3953,15 +3965,8 @@ body {
     padding-right: 24px;
   }
 
-  /* Hide individual desktop cells on mobile */
   .apex-app .food-desktop-only { display: none !important; }
-
-  /* Show mobile grouped block */
-  .apex-app .food-row-mobile {
-    display: flex !important;
-    flex-direction: column;
-    gap: 2px;
-  }
+  .apex-app .food-row-mobile { display: flex !important; flex-direction: column; gap: 2px; }
 
   /* Line 1 values: g + kcal */
   .apex-app .food-row-line1 {
@@ -4125,6 +4130,7 @@ body {
 
 <!-- ════ APP SWITCHER ════ -->
 <div class="app-switcher">
+  <button class="switcher-hamburger" id="switcherHamburgerBtn" onclick="toggleChronicleSidebar()" aria-label="Menu" style="display:none">☰</button>
   <button class="app-switch-btn active-apex" id="switch-apex" onclick="switchApp('apex')">
     <span class="switch-logo-apex">APEX</span>
   </button>
@@ -4845,7 +4851,6 @@ body {
 
   <!-- Header -->
   <header>
-    <button class="chronicle-menu-btn" id="chronicleMenuBtn" onclick="toggleChronicleSidebar()" aria-label="Menu">☰</button>
     <div class="logo">Chron<span>icle</span></div>
     <div class="header-divider"></div>
     <div class="header-tabs">
@@ -5122,6 +5127,9 @@ function switchApp(app) {
   document.getElementById('app-chronicle').classList.toggle('active', app === 'chronicle');
   document.getElementById('switch-apex').className = 'app-switch-btn' + (app === 'apex' ? ' active-apex' : '');
   document.getElementById('switch-chronicle').className = 'app-switch-btn' + (app === 'chronicle' ? ' active-chronicle' : '');
+  // Show hamburger in switcher only when Chronicle is active on mobile
+  const hb = document.getElementById('switcherHamburgerBtn');
+  if (hb) hb.style.display = (app === 'chronicle') ? '' : 'none';
   applySwitcherTheme(app);
 }
 
@@ -6077,15 +6085,8 @@ function renderMeals() {
             <span class="food-desktop-only">${calcMacro(it,'carbs')}g</span>
             <span class="food-desktop-only">${calcMacro(it,'fat')}g</span>
             <span class="food-row-mobile">
-              <span class="food-row-line1">
-                <span class="food-val">${it.amount}g</span>
-                <span class="food-val food-cal-val">${Math.round(calcCals(it))} kcal</span>
-              </span>
-              <span class="food-row-line2">
-                <span>P: ${calcMacro(it,'protein')}g</span>
-                <span>C: ${calcMacro(it,'carbs')}g</span>
-                <span>F: ${calcMacro(it,'fat')}g</span>
-              </span>
+              <span class="food-row-line1"><span class="food-val">${it.amount}g</span><span class="food-val food-cal-val">${Math.round(calcCals(it))} kcal</span></span>
+              <span class="food-row-line2"><span>P: ${calcMacro(it,'protein')}g</span><span>C: ${calcMacro(it,'carbs')}g</span><span>F: ${calcMacro(it,'fat')}g</span></span>
             </span>
             <button class="food-delete" onclick="deleteFoodItem(${mi},${ii})">✕</button>
           </div>`).join('')}
@@ -9116,6 +9117,8 @@ let driveFolderId = null;
 (function mergedInit() {
   syncThemeButtons();
   applySwitcherTheme(activeApp);
+  const hb = document.getElementById('switcherHamburgerBtn');
+  if (hb) hb.style.display = (activeApp === 'chronicle') ? '' : 'none';
   applyStoredColors();
   if (typeof chr_init === 'function') chr_init();
   driveInit();
@@ -9496,9 +9499,7 @@ function driveRestoreAllData(data) {
   // Restore APEX
   if (data.apex?.profiles) {
     localStorage.setItem('apex_profiles', JSON.stringify(data.apex.profiles));
-    if (data.apex.profiles.length > 0) {
-      localStorage.setItem('apex_active_profile', data.apex.profiles[0].id);
-    }
+    if (data.apex.profiles.length > 0) localStorage.setItem('apex_active_profile', data.apex.profiles[0].id);
     Object.entries(data.apex.states || {}).forEach(([key, val]) => {
       localStorage.setItem(key, JSON.stringify(val));
     });
@@ -9691,10 +9692,7 @@ async function driveRestoreFile(fileId, fileName) {
 
 function driveHotReload() {
   toast('✓ Data restored! Reloading...');
-  setTimeout(() => {
-    const url = location.href.split('?')[0] + '?restored=' + Date.now();
-    location.replace(url);
-  }, 800);
+  setTimeout(() => { location.replace(location.href.split('?')[0] + '?restored=' + Date.now()); }, 800);
 }
 
 // In-app confirm dialog — replaces native confirm() which is blocked in some mobile PWAs
