@@ -8379,8 +8379,7 @@ function _tStart(e) {
   const m = attr.match(re);
   if (!m) return;
   e.preventDefault();
-  _tDragId = m[1];
-  _tDragOrigin = taskEl;
+  _tDragId = m[1]; _tDragOrigin = taskEl;
   _tDragGhost = taskEl.cloneNode(true);
   const r = taskEl.getBoundingClientRect();
   Object.assign(_tDragGhost.style, {
@@ -8427,8 +8426,7 @@ function _tEnd(e) {
     const task = tasks.find(tk => tk.id === _tDragId);
     if (task && task.due !== newDate) {
       tasks = tasks.map(tk => tk.id === _tDragId ? { ...tk, due: newDate } : tk);
-      saveTasks();
-      renderAll();
+      saveTasks(); renderAll();
     }
   }
   _tCleanup();
@@ -9415,21 +9413,16 @@ function driveSetStatus(msg, isError = false) {
 }
 
 async function driveGetFolderId() {
-  // 1. In-memory cache (fastest)
   if (driveFolderId) return driveFolderId;
-
-  // 2. localStorage cache — survives page reloads without a fresh API call
   const cached = localStorage.getItem('gdrive-folder-id');
   if (cached) { driveFolderId = cached; return driveFolderId; }
 
-  // 3. Search Drive for existing folder
   const searchRes = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${driveAccessToken}` } }
   );
   const searchData = await searchRes.json();
-
-  if (searchData.error) throw new Error('Drive API error: ' + (searchData.error.message || JSON.stringify(searchData.error)));
+  if (searchData.error) throw new Error('Drive API: ' + (searchData.error.message || JSON.stringify(searchData.error)));
 
   if (searchData.files?.length > 0) {
     driveFolderId = searchData.files[0].id;
@@ -9437,17 +9430,10 @@ async function driveGetFolderId() {
     return driveFolderId;
   }
 
-  // 4. Create folder if it doesn't exist
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${driveAccessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      name: GDRIVE_FOLDER_NAME,
-      mimeType: 'application/vnd.google-apps.folder'
-    })
+    headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: GDRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
   });
   const folder = await createRes.json();
   if (!folder.id) throw new Error('Failed to create Drive folder: ' + JSON.stringify(folder));
@@ -9494,6 +9480,10 @@ function driveRestoreAllData(data) {
   // Restore APEX
   if (data.apex?.profiles) {
     localStorage.setItem('apex_profiles', JSON.stringify(data.apex.profiles));
+    // Set active profile to first profile in backup so state key matches
+    if (data.apex.profiles.length > 0) {
+      localStorage.setItem('apex_active_profile', data.apex.profiles[0].id);
+    }
     Object.entries(data.apex.states || {}).forEach(([key, val]) => {
       localStorage.setItem(key, JSON.stringify(val));
     });
@@ -9604,11 +9594,11 @@ async function driveRestore() {
       `https://www.googleapis.com/drive/v3/files/${latest.id}?alt=media`,
       { headers: { Authorization: `Bearer ${driveAccessToken}` } }
     );
-    if (!fileRes.ok) throw new Error(`HTTP ${fileRes.status} downloading backup`);
+    if (!fileRes.ok) throw new Error('HTTP ' + fileRes.status + ' downloading backup');
     const text = await fileRes.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { throw new Error('Backup file is not valid JSON: ' + text.slice(0, 100)); }
-    if (data.error) throw new Error('Drive API error: ' + (data.error.message || JSON.stringify(data.error)));
+    try { data = JSON.parse(text); } catch(e) { throw new Error('Backup not valid JSON: ' + text.slice(0, 80)); }
+    if (data.error) throw new Error('Drive API: ' + (data.error.message || JSON.stringify(data.error)));
     driveRestoreAllData(data);
 
     driveSetStatus('✓ Restored from Drive!');
@@ -9685,47 +9675,14 @@ async function driveRestoreFile(fileId, fileName) {
 }
 
 function driveHotReload() {
-  // Re-read ALL module-level variables from localStorage.
-  // These are initialized once at page load, so we must refresh them manually
-  // instead of doing location.reload() (which hits the SW cache on mobile).
-  try {
-    // ── APEX: reload state for active profile ──
-    state = JSON.parse(localStorage.getItem(getStateKey()) || '{}');
-    applyDefaults();
-
-    // ── Chronicle: reload tasks & categories ──
-    tasks = JSON.parse(localStorage.getItem('chronicle-tasks') || '[]');
-    const defaultCats = JSON.parse(localStorage.getItem('chronicle-cats') || 'null');
-    if (defaultCats) categories = defaultCats;
-
-    // ── Settings: reload lang & display mode ──
-    currentLang = localStorage.getItem('apex_lang') || 'en';
-    displayMode  = localStorage.getItem('chronicle-display') || 'simple';
-
-    // ── Re-render both apps ──
-    renderProfileUI();
-    applyProfileTheme();
-    applyStoredColors();
-    syncThemeButtons();
-
-    // Re-render APEX current tab
-    const activeTabEl = document.querySelector('.apex-app .tab-content.active');
-    const activeTab = activeTabEl?.id?.replace('tab-', '') || 'dashboard';
-    switchTab(activeTab);
-
-    // Re-render Chronicle
-    if (typeof chr_init === 'function') chr_init();
-
-    toast('✓ Data restored successfully!');
-
-  } catch(err) {
-    console.error('Hot reload error:', err);
-    // Fallback: force a true network reload bypassing SW cache
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
-    }
-    setTimeout(() => location.reload(true), 300);
-  }
+  // After restoring to localStorage, do a clean page reload so all
+  // module-level variables (profiles, state, tasks, etc.) reinitialise
+  // from scratch. Use a cache-busting query param to bypass SW cache.
+  toast('✓ Data restored! Reloading...');
+  setTimeout(() => {
+    const url = location.href.split('?')[0] + '?restored=' + Date.now();
+    location.replace(url);
+  }, 800);
 }
 
 // In-app confirm dialog — replaces native confirm() which is blocked in some mobile PWAs
