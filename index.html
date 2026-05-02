@@ -2610,13 +2610,15 @@ html[data-theme="dark"] .apex-app {
 
 .apex-app .food-row {
   display: grid;
-  grid-template-columns: 1fr 60px 60px 60px 60px 60px 30px;
+  grid-template-columns: 1fr 60px 60px 60px 60px 60px 0 30px;
   gap: 8px;
   align-items: center;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
   font-size: 0.8rem;
 }
+.apex-app .food-row-mobile { display: none; }
+.apex-app .food-desktop-only { display: block; }
 .food-row:last-child { border-bottom: none; }
 .apex-app .food-header { color: var(--text3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 .apex-app .food-name { color: var(--text); font-weight: 500; }
@@ -3936,7 +3938,7 @@ body {
     display: none !important;
   }
 
-  /* Food data row: 2-line compact card */
+  /* Food data row: 2-line compact card on mobile */
   .apex-app .food-row:not(.food-header) {
     display: flex !important;
     flex-direction: column !important;
@@ -3948,7 +3950,17 @@ body {
   .apex-app .food-row:not(.food-header) .food-name {
     font-size: 0.88rem;
     font-weight: 600;
-    padding-right: 24px; /* space for delete btn */
+    padding-right: 24px;
+  }
+
+  /* Hide individual desktop cells on mobile */
+  .apex-app .food-desktop-only { display: none !important; }
+
+  /* Show mobile grouped block */
+  .apex-app .food-row-mobile {
+    display: flex !important;
+    flex-direction: column;
+    gap: 2px;
   }
 
   /* Line 1 values: g + kcal */
@@ -6059,14 +6071,21 @@ function renderMeals() {
         ${meal.items.map((it, ii) => `
           <div class="food-row">
             <span class="food-name">${it.name}</span>
-            <span class="food-row-line1">
-              <span class="food-val">${it.amount}g</span>
-              <span class="food-val food-cal-val">${Math.round(calcCals(it))} kcal</span>
-            </span>
-            <span class="food-row-line2">
-              <span>P: ${calcMacro(it,'protein')}g</span>
-              <span>C: ${calcMacro(it,'carbs')}g</span>
-              <span>F: ${calcMacro(it,'fat')}g</span>
+            <span class="food-val food-desktop-only">${it.amount}g</span>
+            <span class="food-val food-cal-val food-desktop-only">${Math.round(calcCals(it))}</span>
+            <span class="food-desktop-only">${calcMacro(it,'protein')}g</span>
+            <span class="food-desktop-only">${calcMacro(it,'carbs')}g</span>
+            <span class="food-desktop-only">${calcMacro(it,'fat')}g</span>
+            <span class="food-row-mobile">
+              <span class="food-row-line1">
+                <span class="food-val">${it.amount}g</span>
+                <span class="food-val food-cal-val">${Math.round(calcCals(it))} kcal</span>
+              </span>
+              <span class="food-row-line2">
+                <span>P: ${calcMacro(it,'protein')}g</span>
+                <span>C: ${calcMacro(it,'carbs')}g</span>
+                <span>F: ${calcMacro(it,'fat')}g</span>
+              </span>
             </span>
             <button class="food-delete" onclick="deleteFoodItem(${mi},${ii})">✕</button>
           </div>`).join('')}
@@ -9416,20 +9435,17 @@ async function driveGetFolderId() {
   if (driveFolderId) return driveFolderId;
   const cached = localStorage.getItem('gdrive-folder-id');
   if (cached) { driveFolderId = cached; return driveFolderId; }
-
   const searchRes = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${driveAccessToken}` } }
   );
   const searchData = await searchRes.json();
   if (searchData.error) throw new Error('Drive API: ' + (searchData.error.message || JSON.stringify(searchData.error)));
-
   if (searchData.files?.length > 0) {
     driveFolderId = searchData.files[0].id;
     localStorage.setItem('gdrive-folder-id', driveFolderId);
     return driveFolderId;
   }
-
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
@@ -9480,7 +9496,6 @@ function driveRestoreAllData(data) {
   // Restore APEX
   if (data.apex?.profiles) {
     localStorage.setItem('apex_profiles', JSON.stringify(data.apex.profiles));
-    // Set active profile to first profile in backup so state key matches
     if (data.apex.profiles.length > 0) {
       localStorage.setItem('apex_active_profile', data.apex.profiles[0].id);
     }
@@ -9675,9 +9690,6 @@ async function driveRestoreFile(fileId, fileName) {
 }
 
 function driveHotReload() {
-  // After restoring to localStorage, do a clean page reload so all
-  // module-level variables (profiles, state, tasks, etc.) reinitialise
-  // from scratch. Use a cache-busting query param to bypass SW cache.
   toast('✓ Data restored! Reloading...');
   setTimeout(() => {
     const url = location.href.split('?')[0] + '?restored=' + Date.now();
