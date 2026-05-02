@@ -2712,7 +2712,23 @@ html[data-theme="dark"] .apex-app {
 
 /* ─── NOTES TAB ─── */
 .apex-app .notes-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; min-height: 70vh; }
-@media (max-width: 800px) { .notes-layout { grid-template-columns: 1fr; } }
+@media (max-width: 800px) {
+  .notes-layout {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto 1fr !important;
+    min-height: unset !important;
+    gap: 12px !important;
+  }
+
+  /* Notes list + button stays on top (natural order) */
+
+  /* Editor moves below */
+  .apex-app .note-editor {
+    order: 1;
+    min-height: 320px !important;
+    max-height: 55vh !important;
+  }
+}
 
 .apex-app .notes-list { display: flex; flex-direction: column; gap: 8px; }
 .apex-app .note-item {
@@ -3568,6 +3584,48 @@ body {
     font-size: 0.9rem;
   }
 }
+
+/* ══════════════════════════════════════════
+   CHRONICLE — Daily view mobile layout
+══════════════════════════════════════════ */
+@media screen and (max-width: 800px) {
+  /* Stack: calendar on top, hourly timeline below */
+  .chronicle-app .daily-layout {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto 1fr !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 8px !important;
+    gap: 10px !important;
+  }
+
+  /* Move calendar col above the hour col */
+  .chronicle-app .daily-cal-col {
+    order: -1;
+    overflow-y: visible !important;
+  }
+
+  /* Mini calendar compact */
+  .chronicle-app .daily-mini-cal {
+    padding: 10px !important;
+  }
+  .chronicle-app .mini-cal-title {
+    font-size: 0.9rem !important;
+  }
+
+  /* Hourly column: scrollable fixed height */
+  .chronicle-app .daily-hour-col {
+    height: 400px !important;
+    overflow-y: auto !important;
+  }
+
+  /* Upcoming tasks: limit so it doesn't push timeline too far */
+  .chronicle-app .daily-upcoming {
+    max-height: 180px;
+    overflow-y: auto;
+  }
+}
+
 @media screen and (max-width: 480px) {
   .chronicle-app .list-title { font-size: 1.4rem !important; }
   .chronicle-app .stat-value { font-size: 1.4rem !important; }
