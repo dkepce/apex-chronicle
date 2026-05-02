@@ -3769,6 +3769,18 @@ body {
   .chronicle-app .form-group { margin-bottom: 10px !important; }
   .chronicle-app .modal-footer { position: sticky !important; bottom: -16px !important; background: var(--surface) !important; padding: 12px 0 8px !important; margin-top: 8px !important; }
   .chronicle-app .btn-save { flex: 1 !important; }
+
+  /* Prevent form-row from overflowing on phones */
+  .chronicle-app .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Modal itself must not exceed viewport */
+  .chronicle-app .modal {
+    box-sizing: border-box !important;
+    max-width: 100vw !important;
+  }
   .color-modal, .pdf-export-modal {
     width: 100% !important;
     max-width: 100% !important;
@@ -5089,11 +5101,13 @@ body {
       </div>
       <div class="form-group" id="due-date-group">
         <label class="form-label" data-i18n="dueDate">Due Date</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input class="form-input" id="task-due" type="date" style="flex:1">
-          <input class="form-input" id="task-time-start" type="time" style="width:100px" placeholder="Start">
-          <span style="color:var(--text-muted);font-size:0.8rem;flex-shrink:0">→</span>
-          <input class="form-input" id="task-time-end" type="time" style="width:100px" placeholder="End">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="form-input" id="task-due" type="date" style="flex:1;min-width:140px">
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            <input class="form-input" id="task-time-start" type="time" style="width:90px" placeholder="Start">
+            <span style="color:var(--text-muted);font-size:0.8rem">→</span>
+            <input class="form-input" id="task-time-end" type="time" style="width:90px" placeholder="End">
+          </div>
         </div>
       </div>
     </div>
