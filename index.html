@@ -3830,16 +3830,70 @@ body {
    CHRONICLE WEEKLY — horizontal scroll
 ══════════════════════════════════════════ */
 @media screen and (max-width: 768px) {
+  /* Weekly view: vertical stack on mobile — one day per row */
   .chronicle-app .week-grid {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
     display: flex !important;
-    gap: 8px;
-    grid-template-columns: none !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    overflow-x: visible !important;
   }
-  .chronicle-app .week-day-col {
-    min-width: 180px;
-    flex-shrink: 0;
+
+  /* Each day column: horizontal layout — date left, tasks right */
+  .chronicle-app .week-col {
+    min-height: unset !important;
+    padding: 10px 12px !important;
+    display: grid !important;
+    grid-template-columns: 56px 1fr !important;
+    gap: 10px !important;
+    align-items: start !important;
+  }
+
+  /* Today highlight stays visible */
+  .chronicle-app .week-col.today-col {
+    border-color: var(--accent) !important;
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface)) !important;
+  }
+
+  /* Day header: compact vertical stack on the left */
+  .chronicle-app .week-day-header {
+    text-align: left !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+    border-right: 1px solid var(--border) !important;
+    padding-right: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding-top: 2px !important;
+  }
+
+  .chronicle-app .week-day-name {
+    font-size: 0.6rem !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  .chronicle-app .week-day-num {
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
+  }
+
+  /* Drop hint hidden on mobile */
+  .chronicle-app .week-drop-hint {
+    display: none !important;
+  }
+
+  /* Tasks area: full width on right side */
+  .chronicle-app .week-tasks-area,
+  .chronicle-app .week-col > div:last-child {
+    min-height: 32px !important;
+  }
+
+  /* Task items: compact */
+  .chronicle-app .week-task-item {
+    font-size: 0.72rem !important;
+    padding: 4px 6px !important;
   }
 }
 
