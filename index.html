@@ -1676,7 +1676,6 @@ html[data-theme="dark"] .chronicle-app {
   }
 
   .chronicle-app .form-group { margin-bottom: 16px; }
-  .chronicle-app .modal-scroll-body { overflow-y: auto; flex: 1; min-height: 0; padding-bottom: 4px; }
 
   .chronicle-app .form-label {
     display: block;
@@ -2716,14 +2715,9 @@ html[data-theme="dark"] .apex-app {
 @media (max-width: 800px) {
   .notes-layout {
     grid-template-columns: 1fr !important;
-    grid-template-rows: auto 1fr !important;
     min-height: unset !important;
     gap: 12px !important;
   }
-
-  /* Notes list + button stays on top (natural order) */
-
-  /* Editor moves below */
   .apex-app .note-editor {
     order: 1;
     min-height: 320px !important;
@@ -3499,8 +3493,8 @@ html[data-theme="dark"] .apex-app {
   .apex-app .sidebar.open {
     transform: translateX(0) !important;
   }
-  .apex-app .sidebar-toggle { display: none !important; } /* moved to switcher bar */
-  .apex-app .sidebar-toggle_disabled {
+  .apex-app .sidebar-toggle { display: none !important; }
+  .apex-app .sidebar-toggle_x {
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -3586,11 +3580,7 @@ body {
   }
 }
 
-/* ══════════════════════════════════════════
-   CHRONICLE — Daily view mobile layout
-══════════════════════════════════════════ */
 @media screen and (max-width: 800px) {
-  /* Stack: calendar on top, hourly timeline below */
   .chronicle-app .daily-layout {
     grid-template-columns: 1fr !important;
     grid-template-rows: auto 1fr !important;
@@ -3599,32 +3589,11 @@ body {
     padding: 8px !important;
     gap: 10px !important;
   }
-
-  /* Move calendar col above the hour col */
-  .chronicle-app .daily-cal-col {
-    order: -1;
-    overflow-y: visible !important;
-  }
-
-  /* Mini calendar compact */
-  .chronicle-app .daily-mini-cal {
-    padding: 10px !important;
-  }
-  .chronicle-app .mini-cal-title {
-    font-size: 0.9rem !important;
-  }
-
-  /* Hourly column: scrollable fixed height */
-  .chronicle-app .daily-hour-col {
-    height: 400px !important;
-    overflow-y: auto !important;
-  }
-
-  /* Upcoming tasks: limit so it doesn't push timeline too far */
-  .chronicle-app .daily-upcoming {
-    max-height: 180px;
-    overflow-y: auto;
-  }
+  .chronicle-app .daily-cal-col { order: -1; overflow-y: visible !important; }
+  .chronicle-app .daily-mini-cal { padding: 10px !important; }
+  .chronicle-app .mini-cal-title { font-size: 0.9rem !important; }
+  .chronicle-app .daily-hour-col { height: 400px !important; overflow-y: auto !important; }
+  .chronicle-app .daily-upcoming { max-height: 180px; overflow-y: auto; }
 }
 
 @media screen and (max-width: 480px) {
@@ -3646,7 +3615,6 @@ body {
 
 /* Hamburger button — hidden on desktop */
 .chronicle-menu-btn { display: none; }
-
 .switcher-hamburger {
   display: none;
   background: none;
@@ -3674,10 +3642,7 @@ body {
 }
 
 @media screen and (max-width: 800px) {
-  /* Unified hamburger in switcher bar — show on mobile */
   .switcher-hamburger { display: flex !important; align-items: center; justify-content: center; }
-
-  /* Chronicle logo redundant on mobile */
   .chronicle-app .logo { display: none !important; }
   .chronicle-app .header-divider { display: none !important; }
 
@@ -3786,6 +3751,7 @@ body {
   .apex-app .modal-overlay {
     align-items: flex-end !important;
   }
+  .chronicle-app .modal-overlay { align-items: flex-end !important; }
   .chronicle-app .modal {
     width: 100% !important;
     max-width: 100% !important;
@@ -3796,7 +3762,13 @@ body {
     left: 0 !important;
     top: auto !important;
     transform: translateY(0) !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
   }
+  .chronicle-app .modal-title { font-size: 1.2rem !important; margin-bottom: 12px !important; }
+  .chronicle-app .form-group { margin-bottom: 10px !important; }
+  .chronicle-app .modal-footer { position: sticky !important; bottom: -16px !important; background: var(--surface) !important; padding: 12px 0 8px !important; margin-top: 8px !important; }
+  .chronicle-app .btn-save { flex: 1 !important; }
   .color-modal, .pdf-export-modal {
     width: 100% !important;
     max-width: 100% !important;
@@ -3831,15 +3803,12 @@ body {
    CHRONICLE WEEKLY — horizontal scroll
 ══════════════════════════════════════════ */
 @media screen and (max-width: 768px) {
-  /* Weekly view: vertical stack on mobile — one day per row */
   .chronicle-app .week-grid {
     display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
     overflow-x: visible !important;
   }
-
-  /* Each day column: horizontal layout — date left, tasks right */
   .chronicle-app .week-col {
     min-height: unset !important;
     padding: 10px 12px !important;
@@ -3848,14 +3817,10 @@ body {
     gap: 10px !important;
     align-items: start !important;
   }
-
-  /* Today highlight stays visible */
   .chronicle-app .week-col.today-col {
     border-color: var(--accent) !important;
     background: color-mix(in srgb, var(--accent) 5%, var(--surface)) !important;
   }
-
-  /* Day header: compact vertical stack on the left */
   .chronicle-app .week-day-header {
     text-align: left !important;
     margin-bottom: 0 !important;
@@ -3866,36 +3831,12 @@ body {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    justify-content: flex-start !important;
     padding-top: 2px !important;
   }
-
-  .chronicle-app .week-day-name {
-    font-size: 0.6rem !important;
-    letter-spacing: 0.08em !important;
-  }
-
-  .chronicle-app .week-day-num {
-    font-size: 1.5rem !important;
-    line-height: 1 !important;
-  }
-
-  /* Drop hint hidden on mobile */
-  .chronicle-app .week-drop-hint {
-    display: none !important;
-  }
-
-  /* Tasks area: full width on right side */
-  .chronicle-app .week-tasks-area,
-  .chronicle-app .week-col > div:last-child {
-    min-height: 32px !important;
-  }
-
-  /* Task items: compact */
-  .chronicle-app .week-task-item {
-    font-size: 0.72rem !important;
-    padding: 4px 6px !important;
-  }
+  .chronicle-app .week-day-name { font-size: 0.6rem !important; }
+  .chronicle-app .week-day-num { font-size: 1.5rem !important; line-height: 1 !important; }
+  .chronicle-app .week-drop-hint { display: none !important; }
+  .chronicle-app .week-task-item { font-size: 0.72rem !important; padding: 4px 6px !important; }
 }
 
 /* ══════════════════════════════════════════
@@ -5194,7 +5135,6 @@ body {
       </div>
     </div>
 
-    </div><!-- end modal-scroll-body -->
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()" data-i18n="cancel">Cancel</button>
       <button class="btn-save" onclick="saveTask()" data-i18n="saveTask">Save Task</button>
@@ -8508,7 +8448,7 @@ function _tEnd(e){if(!_tDragId)return;const t=e.changedTouches[0];if(_tDragGhost
 function _tCancel(){_tCleanup();}
 
 function _tCleanup(){if(_tDragGhost){_tDragGhost.remove();_tDragGhost=null;}if(_tDragOrigin){_tDragOrigin.classList.remove('dragging');_tDragOrigin=null;}if(_tActiveCol){_tActiveCol.classList.remove('drop-target');_tActiveCol=null;}_tDragId=null;document.removeEventListener('touchmove',_tMove);document.removeEventListener('touchend',_tEnd);document.removeEventListener('touchcancel',_tCancel);}
-// ── End Touch DnD Shim ──
+// ── End Touch DnD ──
 
 function onWeekDragStart(e, taskId) {
   draggedTaskId = taskId;
@@ -9487,7 +9427,7 @@ async function driveGetFolderId() {
   if (searchData.files?.length > 0) { driveFolderId = searchData.files[0].id; localStorage.setItem('gdrive-folder-id', driveFolderId); return driveFolderId; }
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: GDRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }) });
   const folder = await createRes.json();
-  if (!folder.id) throw new Error('Failed to create Drive folder: ' + JSON.stringify(folder));
+  if (!folder.id) throw new Error('Failed to create Drive folder');
   driveFolderId = folder.id; localStorage.setItem('gdrive-folder-id', driveFolderId); return driveFolderId;
 }
 
@@ -9643,7 +9583,7 @@ async function driveRestore() {
     if (!fileRes.ok) throw new Error('HTTP ' + fileRes.status);
     const text = await fileRes.text();
     let data; try { data = JSON.parse(text); } catch(e) { throw new Error('Not valid JSON'); }
-    if (data.error) throw new Error('Drive API: ' + (data.error.message || JSON.stringify(data.error)));
+    if (data.error) throw new Error('Drive: ' + (data.error.message||JSON.stringify(data.error)));
     driveRestoreAllData(data);
 
     driveSetStatus('✓ Restored from Drive!');
