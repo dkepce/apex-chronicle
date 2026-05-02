@@ -5167,16 +5167,16 @@ body {
 
 <!-- Task quick-preview popup (long press on mobile) -->
 <div id="taskPreviewOverlay" onclick="closeTaskPreview()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:8000;"></div>
-<div id="taskPreviewPopup" style="display:none;position:fixed;left:50%;bottom:80px;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 8px 32px rgba(0,0,0,0.22);z-index:8001;">
+<div id="taskPreviewPopup" style="display:none;position:fixed;left:50%;bottom:80px;transform:translateX(-50%);width:calc(100% - 32px);max-width:420px;border-radius:16px;padding:18px;box-shadow:0 8px 32px rgba(0,0,0,0.28);z-index:8001;">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-    <div id="taskPreviewTitle" style="font-family:var(--font-display);font-size:1.1rem;flex:1;padding-right:8px;color:var(--text);"></div>
-    <button onclick="closeTaskPreview()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);line-height:1;">✕</button>
+    <div id="taskPreviewTitle" style="font-size:1.1rem;font-weight:600;flex:1;padding-right:8px;"></div>
+    <button onclick="closeTaskPreview()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;line-height:1;opacity:0.6;">✕</button>
   </div>
-  <div id="taskPreviewMeta" style="font-size:0.72rem;color:var(--text-muted);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);"></div>
-  <div id="taskPreviewNotes" style="font-size:0.85rem;color:var(--text);line-height:1.5;white-space:pre-wrap;border-top:1px solid var(--border);padding-top:10px;"></div>
+  <div id="taskPreviewMeta" style="font-size:0.72rem;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;"></div>
+  <div id="taskPreviewNotes" style="font-size:0.85rem;line-height:1.5;white-space:pre-wrap;padding-top:10px;margin-top:2px;"></div>
   <div style="display:flex;gap:8px;margin-top:14px;">
-    <button onclick="if(currentPreviewTaskId){editTask(currentPreviewTaskId);closeTaskPreview();}" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px;font-size:0.85rem;cursor:pointer;">✎ Edit</button>
-    <button onclick="closeTaskPreview()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;font-size:0.85rem;cursor:pointer;color:var(--text);">Close</button>
+    <button id="taskPreviewEditBtn" onclick="if(currentPreviewTaskId){editTask(currentPreviewTaskId);closeTaskPreview();}" style="flex:1;border:none;border-radius:8px;padding:9px;font-size:0.85rem;cursor:pointer;color:#fff;">✎ Edit</button>
+    <button onclick="closeTaskPreview()" id="taskPreviewCloseBtn" style="flex:1;border-radius:8px;padding:9px;font-size:0.85rem;cursor:pointer;">Close</button>
   </div>
 </div>
 
@@ -5919,6 +5919,28 @@ function showTaskPreview(taskId) {
   if (!task) return;
   currentPreviewTaskId = taskId;
 
+  // Read actual computed colors from the Chronicle app element
+  const appEl = document.querySelector('.chronicle-app') || document.body;
+  const cs = getComputedStyle(appEl);
+  const bg      = cs.getPropertyValue('--surface').trim()  || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1a2235' : '#fdfaf4');
+  const bg2     = cs.getPropertyValue('--surface2').trim() || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2d42' : '#ede8dc');
+  const border  = cs.getPropertyValue('--border').trim()   || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#2d3a52' : '#d4cbb8');
+  const text    = cs.getPropertyValue('--text').trim()     || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#e8ecf4' : '#1a1714');
+  const muted   = cs.getPropertyValue('--text-muted').trim()|| (document.documentElement.getAttribute('data-theme') === 'dark' ? '#8892a8' : '#7a7168');
+  const accent  = cs.getPropertyValue('--accent').trim()   || '#c85a2a';
+
+  const popup = document.getElementById('taskPreviewPopup');
+  popup.style.background   = bg;
+  popup.style.border       = `1px solid ${border}`;
+  popup.style.color        = text;
+
+  document.getElementById('taskPreviewTitle').style.color = text;
+  document.getElementById('taskPreviewEditBtn').style.background = accent;
+  const closeBtn = document.getElementById('taskPreviewCloseBtn');
+  closeBtn.style.background = bg2;
+  closeBtn.style.border = `1px solid ${border}`;
+  closeBtn.style.color = text;
+
   document.getElementById('taskPreviewTitle').textContent = task.title || '(no title)';
 
   const meta = [];
@@ -5926,21 +5948,22 @@ function showTaskPreview(taskId) {
   if (task.priority && task.priority !== 'normal') meta.push('🔺 ' + task.priority);
   if (task.tags?.length) task.tags.forEach(tg => meta.push('#' + tg));
   const metaEl = document.getElementById('taskPreviewMeta');
-  metaEl.innerHTML = meta.map(m => `<span style="background:var(--surface2);padding:2px 7px;border-radius:20px;">${m}</span>`).join('');
+  metaEl.innerHTML = meta.map(m => `<span style="background:${bg2};padding:2px 8px;border-radius:20px;border:1px solid ${border};color:${muted}">${m}</span>`).join('');
 
   const notesEl = document.getElementById('taskPreviewNotes');
+  notesEl.style.borderTop = `1px solid ${border}`;
   if (task.notes && task.notes.trim()) {
     notesEl.textContent = task.notes;
     notesEl.style.fontStyle = '';
-    notesEl.style.color = 'var(--text)';
+    notesEl.style.color = text;
   } else {
     notesEl.textContent = 'No notes added.';
     notesEl.style.fontStyle = 'italic';
-    notesEl.style.color = 'var(--text-muted)';
+    notesEl.style.color = muted;
   }
 
   document.getElementById('taskPreviewOverlay').style.display = 'block';
-  document.getElementById('taskPreviewPopup').style.display = 'block';
+  popup.style.display = 'block';
 }
 
 function closeTaskPreview() {
