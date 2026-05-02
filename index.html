@@ -3482,7 +3482,8 @@ html[data-theme="dark"] .apex-app {
   .apex-app .sidebar.open {
     transform: translateX(0) !important;
   }
-  .apex-app .sidebar-toggle {
+  .apex-app .sidebar-toggle { display: none !important; } /* moved to switcher bar */
+  .apex-app .sidebar-toggle_disabled {
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -3587,8 +3588,8 @@ body {
 /* Hamburger button — hidden on desktop */
 .chronicle-menu-btn { display: none; }
 
-/* Hamburger lives in the switcher bar on mobile */
 .switcher-hamburger {
+  display: none;
   background: none;
   border: none;
   font-size: 1.3rem;
@@ -3614,7 +3615,10 @@ body {
 }
 
 @media screen and (max-width: 800px) {
-  /* Chronicle logo hidden on mobile — switcher bar shows the app name */
+  /* Unified hamburger in switcher bar — show on mobile */
+  .switcher-hamburger { display: flex !important; align-items: center; justify-content: center; }
+
+  /* Chronicle logo redundant on mobile */
   .chronicle-app .logo { display: none !important; }
   .chronicle-app .header-divider { display: none !important; }
 
@@ -3950,7 +3954,7 @@ body {
     display: none !important;
   }
 
-  /* Food data row: 2-line compact card on mobile */
+  /* Food data row: 2-line compact card */
   .apex-app .food-row:not(.food-header) {
     display: flex !important;
     flex-direction: column !important;
@@ -3966,7 +3970,8 @@ body {
   }
 
   .apex-app .food-desktop-only { display: none !important; }
-  .apex-app .food-row-mobile { display: flex !important; flex-direction: column; gap: 2px; }
+  .apex-app .food-row-mobile { display: flex !important; flex-direction: column; gap: 2px;
+  }
 
   /* Line 1 values: g + kcal */
   .apex-app .food-row-line1 {
@@ -4130,7 +4135,7 @@ body {
 
 <!-- ════ APP SWITCHER ════ -->
 <div class="app-switcher">
-  <button class="switcher-hamburger" id="switcherHamburgerBtn" onclick="toggleChronicleSidebar()" aria-label="Menu" style="display:none">☰</button>
+  <button class="switcher-hamburger" id="switcherHamburgerBtn" onclick="toggleAppSidebar()" aria-label="Menu">☰</button>
   <button class="app-switch-btn active-apex" id="switch-apex" onclick="switchApp('apex')">
     <span class="switch-logo-apex">APEX</span>
   </button>
@@ -4201,7 +4206,6 @@ body {
 <div class="app-container active" id="app-apex">
 <div class="apex-app">
 
-<button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <aside class="sidebar" id="sidebar">
@@ -5127,9 +5131,6 @@ function switchApp(app) {
   document.getElementById('app-chronicle').classList.toggle('active', app === 'chronicle');
   document.getElementById('switch-apex').className = 'app-switch-btn' + (app === 'apex' ? ' active-apex' : '');
   document.getElementById('switch-chronicle').className = 'app-switch-btn' + (app === 'chronicle' ? ' active-chronicle' : '');
-  // Show hamburger in switcher only when Chronicle is active on mobile
-  const hb = document.getElementById('switcherHamburgerBtn');
-  if (hb) hb.style.display = (app === 'chronicle') ? '' : 'none';
   applySwitcherTheme(app);
 }
 
@@ -5803,6 +5804,11 @@ function switchTab(tab) {
   }
 }
 
+function toggleAppSidebar() {
+  if (activeApp === 'chronicle') toggleChronicleSidebar();
+  else toggleSidebar();
+}
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
@@ -6084,10 +6090,7 @@ function renderMeals() {
             <span class="food-desktop-only">${calcMacro(it,'protein')}g</span>
             <span class="food-desktop-only">${calcMacro(it,'carbs')}g</span>
             <span class="food-desktop-only">${calcMacro(it,'fat')}g</span>
-            <span class="food-row-mobile">
-              <span class="food-row-line1"><span class="food-val">${it.amount}g</span><span class="food-val food-cal-val">${Math.round(calcCals(it))} kcal</span></span>
-              <span class="food-row-line2"><span>P: ${calcMacro(it,'protein')}g</span><span>C: ${calcMacro(it,'carbs')}g</span><span>F: ${calcMacro(it,'fat')}g</span></span>
-            </span>
+            <span class="food-row-mobile"><span class="food-row-line1"><span class="food-val">${it.amount}g</span><span class="food-val food-cal-val">${Math.round(calcCals(it))} kcal</span></span><span class="food-row-line2"><span>P: ${calcMacro(it,'protein')}g</span><span>C: ${calcMacro(it,'carbs')}g</span><span>F: ${calcMacro(it,'fat')}g</span></span></span>
             <button class="food-delete" onclick="deleteFoodItem(${mi},${ii})">✕</button>
           </div>`).join('')}
         <div class="add-food-form" style="margin-top:10px">
@@ -8377,93 +8380,21 @@ function renderWeekly() {
 let draggedTaskId = null;
 
 
-// ── Weekly View: Touch Drag-and-Drop Shim ─────────────────────────────────
-let _tDragId = null, _tDragGhost = null, _tDragOrigin = null, _tActiveCol = null;
+// ── Weekly View Touch DnD Shim ──
+let _tDragId=null,_tDragGhost=null,_tDragOrigin=null,_tActiveCol=null;
 
-function _weekTouchInit() {
-  const grid = document.getElementById('week-grid');
-  if (!grid) return;
-  grid.querySelectorAll('.week-task-item[draggable="true"]').forEach(el => {
-    const fresh = el.cloneNode(true);
-    el.parentNode.replaceChild(fresh, el);
-    fresh.addEventListener('touchstart', _tStart, { passive: false });
-  });
-}
+function _weekTouchInit(){const grid=document.getElementById('week-grid');if(!grid)return;grid.querySelectorAll('.week-task-item[draggable="true"]').forEach(el=>{const fresh=el.cloneNode(true);el.parentNode.replaceChild(fresh,el);fresh.addEventListener('touchstart',_tStart,{passive:false});});}
 
-function _tStart(e) {
-  if (e.touches.length !== 1) return;
-  const taskEl = e.currentTarget;
-  const attr = taskEl.getAttribute('ondragstart') || '';
-  const sq = "'";
-  const re = new RegExp(sq + '([^' + sq + ']+)' + sq);
-  const m = attr.match(re);
-  if (!m) return;
-  e.preventDefault();
-  _tDragId = m[1]; _tDragOrigin = taskEl;
-  _tDragGhost = taskEl.cloneNode(true);
-  const r = taskEl.getBoundingClientRect();
-  Object.assign(_tDragGhost.style, {
-    position: 'fixed', left: r.left + 'px', top: r.top + 'px',
-    width: r.width + 'px', opacity: '0.75', pointerEvents: 'none',
-    zIndex: '9999', transform: 'scale(1.05)',
-    boxShadow: '0 8px 28px rgba(0,0,0,0.25)', borderRadius: '8px', transition: 'none',
-  });
-  document.body.appendChild(_tDragGhost);
-  taskEl.classList.add('dragging');
-  document.addEventListener('touchmove',   _tMove,   { passive: false });
-  document.addEventListener('touchend',    _tEnd,    { passive: false });
-  document.addEventListener('touchcancel', _tCancel, { passive: false });
-}
+function _tStart(e){if(e.touches.length!==1)return;const taskEl=e.currentTarget;const attr=taskEl.getAttribute('ondragstart')||'';const sq="'";const re=new RegExp(sq+'([^'+sq+']+)'+sq);const m=attr.match(re);if(!m)return;e.preventDefault();_tDragId=m[1];_tDragOrigin=taskEl;_tDragGhost=taskEl.cloneNode(true);const r=taskEl.getBoundingClientRect();Object.assign(_tDragGhost.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',opacity:'0.75',pointerEvents:'none',zIndex:'9999',transform:'scale(1.05)',boxShadow:'0 8px 28px rgba(0,0,0,0.25)',borderRadius:'8px',transition:'none'});document.body.appendChild(_tDragGhost);taskEl.classList.add('dragging');document.addEventListener('touchmove',_tMove,{passive:false});document.addEventListener('touchend',_tEnd,{passive:false});document.addEventListener('touchcancel',_tCancel,{passive:false});}
 
-function _tMove(e) {
-  if (!_tDragId) return;
-  e.preventDefault();
-  const t = e.touches[0];
-  if (_tDragGhost) {
-    _tDragGhost.style.left = (t.clientX - _tDragGhost.offsetWidth / 2) + 'px';
-    _tDragGhost.style.top  = (t.clientY - _tDragGhost.offsetHeight / 2) + 'px';
-  }
-  if (_tDragGhost) _tDragGhost.style.visibility = 'hidden';
-  const under = document.elementFromPoint(t.clientX, t.clientY);
-  if (_tDragGhost) _tDragGhost.style.visibility = '';
-  const col = under ? under.closest('.week-col') : null;
-  if (col !== _tActiveCol) {
-    if (_tActiveCol) _tActiveCol.classList.remove('drop-target');
-    if (col)         col.classList.add('drop-target');
-    _tActiveCol = col;
-  }
-}
+function _tMove(e){if(!_tDragId)return;e.preventDefault();const t=e.touches[0];if(_tDragGhost){_tDragGhost.style.left=(t.clientX-_tDragGhost.offsetWidth/2)+'px';_tDragGhost.style.top=(t.clientY-_tDragGhost.offsetHeight/2)+'px';}if(_tDragGhost)_tDragGhost.style.visibility='hidden';const under=document.elementFromPoint(t.clientX,t.clientY);if(_tDragGhost)_tDragGhost.style.visibility='';const col=under?under.closest('.week-col'):null;if(col!==_tActiveCol){if(_tActiveCol)_tActiveCol.classList.remove('drop-target');if(col)col.classList.add('drop-target');_tActiveCol=col;}}
 
-function _tEnd(e) {
-  if (!_tDragId) return;
-  const t = e.changedTouches[0];
-  if (_tDragGhost) _tDragGhost.style.visibility = 'hidden';
-  const under = document.elementFromPoint(t.clientX, t.clientY);
-  if (_tDragGhost) _tDragGhost.style.visibility = '';
-  const col = under ? under.closest('.week-col') : null;
-  const newDate = col ? col.dataset.date : null;
-  if (newDate && _tDragId) {
-    const task = tasks.find(tk => tk.id === _tDragId);
-    if (task && task.due !== newDate) {
-      tasks = tasks.map(tk => tk.id === _tDragId ? { ...tk, due: newDate } : tk);
-      saveTasks(); renderAll();
-    }
-  }
-  _tCleanup();
-}
+function _tEnd(e){if(!_tDragId)return;const t=e.changedTouches[0];if(_tDragGhost)_tDragGhost.style.visibility='hidden';const under=document.elementFromPoint(t.clientX,t.clientY);if(_tDragGhost)_tDragGhost.style.visibility='';const col=under?under.closest('.week-col'):null;const newDate=col?col.dataset.date:null;if(newDate&&_tDragId){const task=tasks.find(tk=>tk.id===_tDragId);if(task&&task.due!==newDate){tasks=tasks.map(tk=>tk.id===_tDragId?{...tk,due:newDate}:tk);saveTasks();renderAll();}}_tCleanup();}
 
-function _tCancel() { _tCleanup(); }
+function _tCancel(){_tCleanup();}
 
-function _tCleanup() {
-  if (_tDragGhost)  { _tDragGhost.remove(); _tDragGhost = null; }
-  if (_tDragOrigin) { _tDragOrigin.classList.remove('dragging'); _tDragOrigin = null; }
-  if (_tActiveCol)  { _tActiveCol.classList.remove('drop-target'); _tActiveCol = null; }
-  _tDragId = null;
-  document.removeEventListener('touchmove',   _tMove);
-  document.removeEventListener('touchend',    _tEnd);
-  document.removeEventListener('touchcancel', _tCancel);
-}
-// ── End Touch DnD Shim ──────────────────────────────────────────────────────
+function _tCleanup(){if(_tDragGhost){_tDragGhost.remove();_tDragGhost=null;}if(_tDragOrigin){_tDragOrigin.classList.remove('dragging');_tDragOrigin=null;}if(_tActiveCol){_tActiveCol.classList.remove('drop-target');_tActiveCol=null;}_tDragId=null;document.removeEventListener('touchmove',_tMove);document.removeEventListener('touchend',_tEnd);document.removeEventListener('touchcancel',_tCancel);}
+// ── End Touch DnD Shim ──
 
 function onWeekDragStart(e, taskId) {
   draggedTaskId = taskId;
@@ -9117,8 +9048,6 @@ let driveFolderId = null;
 (function mergedInit() {
   syncThemeButtons();
   applySwitcherTheme(activeApp);
-  const hb = document.getElementById('switcherHamburgerBtn');
-  if (hb) hb.style.display = (activeApp === 'chronicle') ? '' : 'none';
   applyStoredColors();
   if (typeof chr_init === 'function') chr_init();
   driveInit();
@@ -9438,27 +9367,14 @@ async function driveGetFolderId() {
   if (driveFolderId) return driveFolderId;
   const cached = localStorage.getItem('gdrive-folder-id');
   if (cached) { driveFolderId = cached; return driveFolderId; }
-  const searchRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
-    { headers: { Authorization: `Bearer ${driveAccessToken}` } }
-  );
+  const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,{ headers: { Authorization: `Bearer ${driveAccessToken}` } });
   const searchData = await searchRes.json();
   if (searchData.error) throw new Error('Drive API: ' + (searchData.error.message || JSON.stringify(searchData.error)));
-  if (searchData.files?.length > 0) {
-    driveFolderId = searchData.files[0].id;
-    localStorage.setItem('gdrive-folder-id', driveFolderId);
-    return driveFolderId;
-  }
-  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: GDRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
-  });
+  if (searchData.files?.length > 0) { driveFolderId = searchData.files[0].id; localStorage.setItem('gdrive-folder-id', driveFolderId); return driveFolderId; }
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: GDRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }) });
   const folder = await createRes.json();
   if (!folder.id) throw new Error('Failed to create Drive folder: ' + JSON.stringify(folder));
-  driveFolderId = folder.id;
-  localStorage.setItem('gdrive-folder-id', driveFolderId);
-  return driveFolderId;
+  driveFolderId = folder.id; localStorage.setItem('gdrive-folder-id', driveFolderId); return driveFolderId;
 }
 
 function driveCollectAllData() {
@@ -9610,10 +9526,9 @@ async function driveRestore() {
       `https://www.googleapis.com/drive/v3/files/${latest.id}?alt=media`,
       { headers: { Authorization: `Bearer ${driveAccessToken}` } }
     );
-    if (!fileRes.ok) throw new Error('HTTP ' + fileRes.status + ' downloading backup');
+    if (!fileRes.ok) throw new Error('HTTP ' + fileRes.status);
     const text = await fileRes.text();
-    let data;
-    try { data = JSON.parse(text); } catch(e) { throw new Error('Backup not valid JSON: ' + text.slice(0, 80)); }
+    let data; try { data = JSON.parse(text); } catch(e) { throw new Error('Not valid JSON'); }
     if (data.error) throw new Error('Drive API: ' + (data.error.message || JSON.stringify(data.error)));
     driveRestoreAllData(data);
 
