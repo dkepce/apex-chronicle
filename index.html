@@ -8374,7 +8374,6 @@ function _tStart(e) {
   if (e.touches.length !== 1) return;
   const taskEl = e.currentTarget;
   const attr = taskEl.getAttribute('ondragstart') || '';
-  // Extract taskId: ondragstart="onWeekDragStart(event,'<id>')"
   const sq = "'";
   const re = new RegExp(sq + '([^' + sq + ']+)' + sq);
   const m = attr.match(re);
@@ -9403,6 +9402,7 @@ function driveSignOut() {
   driveUser = null;
   driveFolderId = null;
   localStorage.removeItem('gdrive-session');
+  localStorage.removeItem('gdrive-folder-id');
   driveSetStatus('Signed out.');
   driveUpdateUI();
 }
@@ -9415,21 +9415,29 @@ function driveSetStatus(msg, isError = false) {
 }
 
 async function driveGetFolderId() {
+  // 1. In-memory cache (fastest)
   if (driveFolderId) return driveFolderId;
 
-  // Search for existing folder
+  // 2. localStorage cache — survives page reloads without a fresh API call
+  const cached = localStorage.getItem('gdrive-folder-id');
+  if (cached) { driveFolderId = cached; return driveFolderId; }
+
+  // 3. Search Drive for existing folder
   const searchRes = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=name='${GDRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${driveAccessToken}` } }
   );
   const searchData = await searchRes.json();
 
+  if (searchData.error) throw new Error('Drive API error: ' + (searchData.error.message || JSON.stringify(searchData.error)));
+
   if (searchData.files?.length > 0) {
     driveFolderId = searchData.files[0].id;
+    localStorage.setItem('gdrive-folder-id', driveFolderId);
     return driveFolderId;
   }
 
-  // Create folder if it doesn't exist
+  // 4. Create folder if it doesn't exist
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: {
@@ -9442,7 +9450,9 @@ async function driveGetFolderId() {
     })
   });
   const folder = await createRes.json();
+  if (!folder.id) throw new Error('Failed to create Drive folder: ' + JSON.stringify(folder));
   driveFolderId = folder.id;
+  localStorage.setItem('gdrive-folder-id', driveFolderId);
   return driveFolderId;
 }
 
@@ -9594,7 +9604,11 @@ async function driveRestore() {
       `https://www.googleapis.com/drive/v3/files/${latest.id}?alt=media`,
       { headers: { Authorization: `Bearer ${driveAccessToken}` } }
     );
-    const data = await fileRes.json();
+    if (!fileRes.ok) throw new Error(`HTTP ${fileRes.status} downloading backup`);
+    const text = await fileRes.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { throw new Error('Backup file is not valid JSON: ' + text.slice(0, 100)); }
+    if (data.error) throw new Error('Drive API error: ' + (data.error.message || JSON.stringify(data.error)));
     driveRestoreAllData(data);
 
     driveSetStatus('✓ Restored from Drive!');
