@@ -1505,6 +1505,110 @@ html[data-theme="dark"] .chronicle-app {
     width: 100%;
   }
 
+  /* ── Week Switcher ── */
+  .chronicle-app .week-switcher {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    margin-bottom: 16px;
+    border-radius: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chronicle-app .week-nav-btn {
+    padding: 6px 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .chronicle-app .week-nav-btn:hover {
+    background: var(--accent-dark);
+    transform: scale(1.05);
+  }
+
+  .chronicle-app .week-nav-btn:active {
+    transform: scale(0.95);
+  }
+
+  .chronicle-app .week-reset-btn {
+    padding: 6px 12px;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .chronicle-app .week-reset-btn:hover {
+    background: var(--border);
+    color: var(--accent);
+  }
+
+  .chronicle-app .week-reset-btn:active {
+    transform: scale(0.95);
+  }
+
+  .chronicle-app .week-range {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.95rem;
+    min-width: 180px;
+    text-align: center;
+  }
+
+  /* Mobile adjustments for week switcher */
+  @media (max-width: 860px) {
+    .chronicle-app .week-switcher {
+      gap: 8px;
+      padding: 10px 12px;
+    }
+
+    .chronicle-app .week-nav-btn,
+    .chronicle-app .week-reset-btn {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+
+    .chronicle-app .week-range {
+      min-width: 150px;
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .chronicle-app .week-switcher {
+      gap: 6px;
+      padding: 8px 10px;
+    }
+
+    .chronicle-app .week-nav-btn {
+      padding: 5px 8px;
+      font-size: 0.75rem;
+    }
+
+    .chronicle-app .week-reset-btn {
+      padding: 5px 8px;
+      font-size: 0.75rem;
+    }
+
+    .chronicle-app .week-range {
+      min-width: auto;
+      font-size: 0.85rem;
+    }
+  }
+
   .chronicle-app .week-task-detail-meta {
     display: flex;
     flex-wrap: wrap;
@@ -5085,6 +5189,13 @@ body {
         <div class="list-title" data-i18n="thisWeeksTasks">This Week's Tasks</div>
         <button class="add-btn" onclick="openModal()" data-i18n="addTask">+ Add Task</button>
       </div>
+      <!-- Week Switcher -->
+      <div class="week-switcher">
+        <button class="week-nav-btn" onclick="prevWeek()" title="Previous week">← Prev</button>
+        <div class="week-range" id="week-range-display">This week</div>
+        <button class="week-nav-btn" onclick="nextWeek()" title="Next week">Next →</button>
+        <button class="week-reset-btn" onclick="resetToCurrentWeek()" title="Return to current week">Today</button>
+      </div>
       <div class="week-grid" id="week-grid"></div>
     </div>
 
@@ -8006,6 +8117,7 @@ let currentType = 'checkbox';
 let currentView = 'dashboard';
 let showCompleted = true;
 let displayMode = localStorage.getItem('chronicle-display') || 'simple'; // 'simple' | 'detail'
+let weekOffset = 0; // Track which week we're viewing (0 = current week, -1 = previous, 1 = next)
 
 const today = new Date();
 const todayStr = today.toISOString().split('T')[0];
@@ -8507,9 +8619,10 @@ function taskCardHTML(t) {
 }
 
 // ── Weekly ──
-function chr_getWeekDates() {
+function chr_getWeekDates(offsetWeeks = 0) {
   const dates = [];
   const d = new Date(today);
+  d.setDate(d.getDate() + (offsetWeeks * 7)); // Add offset weeks
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
   const monday = new Date(d.setDate(diff));
@@ -8523,10 +8636,35 @@ function chr_getWeekDates() {
 
 function renderWeekly() {
   const el = document.getElementById('week-grid');
-  const weekDates = chr_getWeekDates();
+  const weekDates = chr_getWeekDates(weekOffset);
   const filtered = getFilteredAllTasks();
   const dayNames = getDays();
   const isDetail = displayMode === 'detail';
+
+  // Update week range display
+  const startDate = weekDates[0];
+  const endDate = weekDates[6];
+  const startMonth = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endMonth = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  let rangeText = '';
+  if (weekOffset === 0) {
+    rangeText = 'This week';
+  } else if (weekOffset === -1) {
+    rangeText = 'Last week';
+  } else if (weekOffset === 1) {
+    rangeText = 'Next week';
+  } else if (weekOffset < 0) {
+    rangeText = `${Math.abs(weekOffset)} weeks ago`;
+  } else {
+    rangeText = `In ${weekOffset} weeks`;
+  }
+  rangeText += ` (${startMonth} – ${endMonth})`;
+  
+  const rangeDisplay = document.getElementById('week-range-display');
+  if (rangeDisplay) {
+    rangeDisplay.textContent = rangeText;
+  }
 
   el.innerHTML = weekDates.map((d, i) => {
     const ds = d.toISOString().split('T')[0];
@@ -8590,6 +8728,22 @@ function renderWeekly() {
     </div>`;
   }).join('');
   _weekTouchInit();
+}
+
+// ── Week Navigation ──
+function nextWeek() {
+  weekOffset++;
+  renderWeekly();
+}
+
+function prevWeek() {
+  weekOffset--;
+  renderWeekly();
+}
+
+function resetToCurrentWeek() {
+  weekOffset = 0;
+  renderWeekly();
 }
 
 // ── Weekly Drag & Drop ──
